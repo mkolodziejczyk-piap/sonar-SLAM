@@ -18,7 +18,7 @@ from bruce_slam.slam import SLAM, Keyframe
 from bruce_slam import pcl
 
 # Argonaut imports
-from sonar_oculus.msg import OculusPing
+# from sonar_oculus.msg import OculusPing
 
 
 class SLAMNode(SLAM):
@@ -131,17 +131,17 @@ class SLAMNode(SLAM):
         self.configure()
         loginfo("SLAM node is initialized")
 
-    @add_lock
-    def sonar_callback(self, ping:OculusPing)->None:
-        """Subscribe once to configure Oculus property.
-        Assume sonar configuration doesn't change much.
+    # @add_lock
+    # def sonar_callback(self, ping:OculusPing)->None:
+    #     """Subscribe once to configure Oculus property.
+    #     Assume sonar configuration doesn't change much.
 
-        Args:
-            ping (OculusPing): The sonar message. 
-        """
+    #     Args:
+    #         ping (OculusPing): The sonar message. 
+    #     """
         
-        self.oculus.configure(ping)
-        self.sonar_sub.unregister()
+    #     self.oculus.configure(ping)
+    #     self.sonar_sub.unregister()
 
     @add_lock
     def SLAM_callback(self, feature_msg:PointCloud2, odom_msg:Odometry)->None:

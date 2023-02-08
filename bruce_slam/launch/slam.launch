@@ -29,14 +29,14 @@
         <group ns="slam">
 
             <!-- start the gyro intergration node if we are not using the kalman filer -->
-            <node if="$(eval kalman_dead_reckoning == false)"  pkg="bruce_slam" name="gyro_fusion" type="gyro_node.py" output="screen">
+            <!-- <node if="$(eval kalman_dead_reckoning == false)"  pkg="bruce_slam" name="gyro_fusion" type="gyro_node.py" output="screen">
                 <rosparam command="load" file="$(find bruce_slam)/config/gyro.yaml"/>
-            </node>
+            </node> -->
 
             <!-- start the dead reckoning node if we are not using the kalman filter -->
-            <node if="$(eval kalman_dead_reckoning == false)"  pkg="bruce_slam" name="dead_reckoning" type="dead_reckoning_node.py" output="screen">
+            <!-- <node if="$(eval kalman_dead_reckoning == false)"  pkg="bruce_slam" name="dead_reckoning" type="dead_reckoning_node.py" output="screen">
                 <rosparam command="load" file="$(find bruce_slam)/config/dead_reckoning.yaml"/>
-            </node>
+            </node> -->
 
             <!-- start the kalman filter if we have requested it above -->
             <node if="$(eval kalman_dead_reckoning == true)"  pkg="bruce_slam" name="kalman" type="kalman_node.py" output="screen">

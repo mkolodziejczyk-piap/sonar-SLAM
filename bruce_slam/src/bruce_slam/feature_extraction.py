@@ -13,7 +13,8 @@ from bruce_slam.utils.visualization import apply_custom_colormap
 #from bruce_slam.feature import FeatureExtraction
 from bruce_slam import pcl
 import matplotlib.pyplot as plt
-from sonar_oculus.msg import OculusPing, OculusPingUncompressed
+# from sonar_oculus.msg import OculusPing, OculusPingUncompressed
+from acoustic_msgs.msg import ProjectedSonarImage, SonarImageData
 from scipy.interpolate import interp1d
 
 from .utils import *
@@ -119,7 +120,8 @@ class FeatureExtraction(object):
                 SONAR_TOPIC, OculusPing, self.callback, queue_size=10)
         else:
             self.sonar_sub = rospy.Subscriber(
-                SONAR_TOPIC_UNCOMPRESSED, OculusPingUncompressed, self.callback, queue_size=10)
+                # SONAR_TOPIC_UNCOMPRESSED, OculusPingUncompressed, self.callback, queue_size=10)
+                SONAR_TOPIC_UNCOMPRESSED, ProjectedSonarImage, self.callback, queue_size=10)                
 
         #feature publish topic
         self.feature_pub = rospy.Publisher(
@@ -138,13 +140,26 @@ class FeatureExtraction(object):
         ping: OculusPing message
         '''
 
+        # print(f"ping.ranges {ping.ranges}")
+
         #get the parameters from the ping message
-        _res = ping.range_resolution
-        _height = ping.num_ranges * _res
-        _rows = ping.num_ranges
-        _width = np.sin(
-            self.to_rad(ping.bearings[-1] - ping.bearings[0]) / 2) * _height * 2
+        _res = ping.ranges[1] # ping.range_resolution
+        _height = len(ping.ranges) * _res # ping.num_ranges * _res
+        _rows = len(ping.beam_directions) # ping.num_ranges
+        # _width = np.sin(
+        #     self.to_rad(ping.bearings[-1] - ping.bearings[0]) / 2) * _height * 2
+        beam_x = np.array([beam.x for beam in ping.beam_directions])
+        beam_y = np.array([beam.y for beam in ping.beam_directions])
+        bearings = np.arctan2(beam_y, beam_x)
+
+        _width = (-ping.beam_directions[0].y + ping.beam_directions[-1].y) * 2 * _height / (ping.beam_directions[0].x + ping.beam_directions[-1].x)    
         _cols = int(np.ceil(_width / _res))
+
+        print(f"_res: {_res}")
+        print(f"_height: {_height}")
+        print(f"_width: {_width}")
+        print(f"_rows: {_rows}")
+        print(f"_cols: {_cols}")
 
         #check if the parameters have changed
         if self.res == _res and self.height == _height and self.rows == _rows and self.width == _width and self.cols == _cols:
@@ -154,7 +169,7 @@ class FeatureExtraction(object):
         self.res, self.height, self.rows, self.width, self.cols = _res, _height, _rows, _width, _cols
 
         #generate the mapping
-        bearings = self.to_rad(np.asarray(ping.bearings, dtype=np.float32))
+        # bearings = self.to_rad(np.asarray(ping.bearings, dtype=np.float32))
         f_bearings = interp1d(
             bearings,
             range(len(bearings)),
@@ -171,6 +186,11 @@ class FeatureExtraction(object):
         r = np.sqrt(np.square(x) + np.square(y))
         self.map_y = np.asarray(r / self.res, dtype=np.float32)
         self.map_x = np.asarray(f_bearings(b), dtype=np.float32)
+        # print(f"b: {b}")
+        # print(f"bearings: {bearings}")
+        # print(f"self.map_x: {np.unique(self.map_x)}")
+        # print(f"self.map_y: {self.map_y}")
+
 
     def publish_features(self, ping, points):
         '''Publish the feature message using the provided parameters in an OculusPing message
@@ -198,23 +218,42 @@ class FeatureExtraction(object):
         sonar_msg: an OculusPing messsage, in polar coordinates
         '''
 
-        if sonar_msg.ping_id % self.skip != 0:
-            self.feature_img = None
-            # Don't extract features in every frame.
-            # But we still need empty point cloud for synchronization in SLAM node.
-            nan = np.array([[np.nan, np.nan]])
-            self.publish_features(sonar_msg, nan)
-            return
+        #TODO there's no ping_id, add external counter?
 
-        #decode the compressed image
-        if self.compressed_images == True:
-            img = np.frombuffer(sonar_msg.ping.data,np.uint8)
-            img = np.array(cv2.imdecode(img,cv2.IMREAD_COLOR)).astype(np.uint8)
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        # if sonar_msg.ping_id % self.skip != 0:
+        #     self.feature_img = None
+        #     # Don't extract features in every frame.
+        #     # But we still need empty point cloud for synchronization in SLAM node.
+        #     nan = np.array([[np.nan, np.nan]])
+        #     self.publish_features(sonar_msg, nan)
+        #     return
+
+        # #decode the compressed image
+        # if self.compressed_images == True:
+        #     img = np.frombuffer(sonar_msg.ping.data,np.uint8)
+        #     img = np.array(cv2.imdecode(img,cv2.IMREAD_COLOR)).astype(np.uint8)
+        #     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             
-        #the image is not compressed, just use the ros numpy package
-        else:
-            img = ros_numpy.image.image_to_numpy(sonar_msg.ping)
+        # #the image is not compressed, just use the ros numpy package
+        # else:
+        #     # img = ros_numpy.image.image_to_numpy(sonar_msg.ping)
+        #     img = np.frombuffer(sonar_msg.image.data, dtype=np.uint8)
+        #     img = np.array(cv2.imdecode(img,cv2.IMREAD_COLOR)).astype(np.uint8)
+        #     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        #     # img = ros_numpy.image.image_to_numpy(sonar_msg.image.data)
+
+        # img = ros_numpy.image.image_to_numpy(sonar_msg.image.data)
+        img = np.frombuffer(sonar_msg.image.data, dtype=np.uint8)
+        # print(f"img: {img.shape}")        
+        # img = np.array(cv2.imdecode(img,cv2.IMREAD_COLOR)).astype(np.uint8)
+        # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        # img = cv2.imdecode(img, cv2.IMREAD_UNCHANGED)
+        # img = cv2.imdecode(img, cv2.IMREAD_GRAYSCALE)
+        # print(f"img: {img}")
+        print(f"img: {img.shape}")
+        print(f"len(sonar_msg.beam_directions): {len(sonar_msg.beam_directions)}")
+        print(f"len(sonar_msg.ranges): {len(sonar_msg.ranges)}")
+        img = np.reshape(img, (-1, len(sonar_msg.beam_directions)))
 
         #generate a mesh grid mapping from polar to cartisian
         self.generate_map_xy(sonar_msg)
@@ -226,6 +265,7 @@ class FeatureExtraction(object):
         vis_img = cv2.remap(img, self.map_x, self.map_y, cv2.INTER_LINEAR)
         vis_img = cv2.applyColorMap(vis_img, 2)
         self.feature_img_pub.publish(ros_numpy.image.numpy_to_image(vis_img, "bgr8"))
+        # self.feature_img_pub.publish(ros_numpy.image.numpy_to_image(img, "mono8"))
 
         #convert to cartisian
         peaks = cv2.remap(peaks, self.map_x, self.map_y, cv2.INTER_LINEAR)        

@@ -10,9 +10,12 @@ from sensor_msgs.msg import PointCloud2, Imu
 from message_filters import ApproximateTimeSynchronizer, Cache, Subscriber
 
 # import custom messages
-from kvh_gyro.msg import gyro as GyroMsg
-from rti_dvl.msg import DVL
-from bar30_depth.msg import Depth
+# from kvh_gyro.msg import gyro as GyroMsg
+# from rti_dvl.msg import DVL
+# from bar30_depth.msg import Depth
+
+from uuv_sensor_ros_plugins_msgs.msg import DVL
+from geometry_msgs.msg import PoseWithCovarianceStamped
 
 # bruce imports
 from bruce_slam.utils.topics import *
@@ -70,7 +73,8 @@ class DeadReckoningNode(object):
 		# Subscribers and caches
 		self.dvl_sub = Subscriber(DVL_TOPIC, DVL)
 		self.gyro_sub = Subscriber(GYRO_INTEGRATION_TOPIC, Odometry)
-		self.depth_sub = Subscriber(DEPTH_TOPIC, Depth)
+		# self.depth_sub = Subscriber(DEPTH_TOPIC, Depth)
+		self.depth_sub = Subscriber(DEPTH_TOPIC, PoseWithCovarianceStamped)
 		self.depth_cache = Cache(self.depth_sub, 1)
 
 		if rospy.get_param(ns + "imu_version") == 1:
@@ -122,7 +126,7 @@ class DeadReckoningNode(object):
 
 		#convert the imu message from msg to gtsam rotation object
 		rot = r2g(imu_msg.orientation)
-		rot = rot.compose(self.imu_rot.inverse())
+		# rot = rot.compose(self.imu_rot.inverse())
 
 		#if we have no yaw yet, set this one as zero
 		if self.imu_yaw0 is None:
@@ -138,47 +142,48 @@ class DeadReckoningNode(object):
 		vel = np.array([dvl_msg.velocity.x, dvl_msg.velocity.y, dvl_msg.velocity.z])
 
 		# package the odom message and publish it
-		self.send_odometry(vel,rot,dvl_msg.header.stamp,depth_msg.depth)
+		# self.send_odometry(vel,rot,dvl_msg.header.stamp,depth_msg.depth)
+		self.send_odometry(vel,rot,dvl_msg.header.stamp,depth_msg.pose.pose.position.z)
 
 
-	def callback_with_gyro(self, imu_msg:Imu, dvl_msg:DVL, gyro_msg:GyroMsg)->None:
-		"""Handle the dead reckoning state estimate using the fiber optic gyro. Here we use the
-		Gyro as a means of getting the yaw estimate, roll and pitch are still VN100.
+	# def callback_with_gyro(self, imu_msg:Imu, dvl_msg:DVL, gyro_msg:GyroMsg)->None:
+	# 	"""Handle the dead reckoning state estimate using the fiber optic gyro. Here we use the
+	# 	Gyro as a means of getting the yaw estimate, roll and pitch are still VN100.
 
-		Args:
-			imu_msg (Imu): the vn100 imu message
-			dvl_msg (DVL): the DVL message
-			gyro_msg (GyroMsg): the euler angles from the gyro
-		"""
-		# decode the gyro message
-		gyro_yaw = r2g(gyro_msg.pose.pose).rotation().yaw()
+	# 	Args:
+	# 		imu_msg (Imu): the vn100 imu message
+	# 		dvl_msg (DVL): the DVL message
+	# 		gyro_msg (GyroMsg): the euler angles from the gyro
+	# 	"""
+	# 	# decode the gyro message
+	# 	gyro_yaw = r2g(gyro_msg.pose.pose).rotation().yaw()
 
-		#get the previous depth message
-		depth_msg = self.depth_cache.getLast()
+	# 	#get the previous depth message
+	# 	depth_msg = self.depth_cache.getLast()
 
-		#if there is no depth message, then skip this time step
-		if depth_msg is None:
-			return
+	# 	#if there is no depth message, then skip this time step
+	# 	if depth_msg is None:
+	# 		return
 
-		#check the delay between the depth message and the DVL
-		dd_delay = (depth_msg.header.stamp - dvl_msg.header.stamp).to_sec()
-		#print(dd_delay)
-		if abs(dd_delay) > 1.0:
-			logdebug("Missing depth message for {}".format(dd_delay))
+	# 	#check the delay between the depth message and the DVL
+	# 	dd_delay = (depth_msg.header.stamp - dvl_msg.header.stamp).to_sec()
+	# 	#print(dd_delay)
+	# 	if abs(dd_delay) > 1.0:
+	# 		logdebug("Missing depth message for {}".format(dd_delay))
 
-		#convert the imu message from msg to gtsam rotation object
-		rot = r2g(imu_msg.orientation)
-		rot = rot.compose(self.imu_rot.inverse())
+	# 	#convert the imu message from msg to gtsam rotation object
+	# 	rot = r2g(imu_msg.orientation)
+	# 	rot = rot.compose(self.imu_rot.inverse())
 
 
-		# Get a rotation matrix
-		rot = gtsam.Rot3.Ypr(gyro_yaw, rot.pitch(), rot.roll())
+	# 	# Get a rotation matrix
+	# 	rot = gtsam.Rot3.Ypr(gyro_yaw, rot.pitch(), rot.roll())
 
-		#parse the DVL message into an array of velocites
-		vel = np.array([dvl_msg.velocity.x, dvl_msg.velocity.y, dvl_msg.velocity.z])
+	# 	#parse the DVL message into an array of velocites
+	# 	vel = np.array([dvl_msg.velocity.x, dvl_msg.velocity.y, dvl_msg.velocity.z])
 
-		# package the odom message and publish it
-		self.send_odometry(vel,rot,dvl_msg.header.stamp,depth_msg.depth)
+	# 	# package the odom message and publish it
+	# 	self.send_odometry(vel,rot,dvl_msg.header.stamp,depth_msg.depth)
 
 
 	def send_odometry(self,vel:np.array,rot:gtsam.Rot3,dvl_time:rospy.Time,depth:float)->None:

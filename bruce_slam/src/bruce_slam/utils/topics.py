@@ -1,18 +1,23 @@
-from rti_dvl.msg import DVL
+# from rti_dvl.msg import DVL
 from sensor_msgs.msg import Imu
-from bar30_depth.msg import Depth
-from sonar_oculus.msg import OculusPing
+# from bar30_depth.msg import Depth
+# from sonar_oculus.msg import OculusPing
+from acoustic_msgs.msg import ProjectedSonarImage, SonarImageData
 
 
 """
 Topics for the bruce_slam project
 """
-IMU_TOPIC = "/vn100/imu/raw"
+# IMU_TOPIC = "/vn100/imu/raw"
+IMU_TOPIC = "/sabuvis/imu"
 IMU_TOPIC_MK_II = "/vectornav/IMU"
-DVL_TOPIC = "/rti/body_velocity/raw"
-DEPTH_TOPIC = "/bar30/depth/raw"
+# DVL_TOPIC = "/rti/body_velocity/raw"
+DVL_TOPIC = "/sabuvis/dvl"
+# DEPTH_TOPIC = "/bar30/depth/raw"
+DEPTH_TOPIC = "/sabuvis/depth"
 SONAR_TOPIC = "/sonar_oculus_node/M750d/ping"
-SONAR_TOPIC_UNCOMPRESSED = "/sonar_oculus_node/ping"
+# SONAR_TOPIC_UNCOMPRESSED = "/sonar_oculus_node/ping"
+SONAR_TOPIC_UNCOMPRESSED = "/sabuvis/blueview_p900/sonar_image_raw"
 SONAR_VERTICAL_TOPIC = "/sonar_oculus_node/M1200d/ping"
 GYRO_TOPIC = "/gyro"
 
@@ -20,7 +25,8 @@ GYRO_TOPIC = "/gyro"
 SLAM_NS = "/bruce/slam/"
 GYRO_INTEGRATION_TOPIC = SLAM_NS + "gyro_integrated"
 SONAR_FUSION_TOPIC = SLAM_NS + "sonar_fusion"
-LOCALIZATION_ODOM_TOPIC = SLAM_NS + "localization/odom"
+# LOCALIZATION_ODOM_TOPIC = SLAM_NS + "localization/odom"
+LOCALIZATION_ODOM_TOPIC = "/sabuvis/pose_gt"
 LOCALIZATION_TRAJ_TOPIC = SLAM_NS + "localization/traj"
 SLAM_POSE_TOPIC = SLAM_NS + "slam/pose"
 SLAM_ODOM_TOPIC = SLAM_NS + "slam/odom"

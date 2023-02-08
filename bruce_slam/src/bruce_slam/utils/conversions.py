@@ -214,7 +214,7 @@ def g2r(gtsam_obj:gtsam.Pose3) -> Pose:
 bridge = cv_bridge.CvBridge()
 
 
-def r2n(ros_msg:OculusPing) -> np.array:
+def r2n(ros_msg:ProjectedSonarImage) -> np.array:
     """Convert a ros message of type OculusPing to a numpy array
 
     Args:
@@ -227,13 +227,17 @@ def r2n(ros_msg:OculusPing) -> np.array:
         np.array: the image data in numpy array form
     """
 
-    if ros_msg._type == "sonar_oculus/OculusPing":
+    if ros_msg._type == "acoustic_msgs/ProjectedSonarImage":
         
-        img = r2n(ros_msg.ping)
+        img = r2n(ros_msg.image)
         img = np.clip(
-            cv2.pow(img / 255.0, 255.0 / ros_msg.fire_msg.gamma) * 255.0, 0, 255
+            cv2.pow(img / 255.0, 1.0) * 255.0, 0, 255 #TODO 255.0 / ros_msg.fire_msg.gamma
         )
         return np.float32(img)
+    elif ros_msg._type == "acoustic_msgs/SonarImageData":
+        # img = bridge.imgmsg_to_cv2(ros_msg, desired_encoding="passthrough")
+        img = ros_numpy.image.image_to_numpy(ros_msg.data)
+        return np.array(img, "uint8")
     elif ros_msg._type == "sensor_msgs/Image":
         img = bridge.imgmsg_to_cv2(ros_msg, desired_encoding="passthrough")
         return np.array(img, "uint8")
